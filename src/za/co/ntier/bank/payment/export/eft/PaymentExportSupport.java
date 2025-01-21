@@ -22,6 +22,9 @@ public abstract class PaymentExportSupport implements PaymentExport{
 	
 	@Override
 	public int exportToFile (MPaySelectionCheck[] checks, boolean depositBatch, String paymentRule, File file, StringBuffer err) {
+		if (checks == null || checks.length == 0)
+			return 0;
+		
 		int lineCount = 0;
 		
 		/* mapping file can be load from attachment */

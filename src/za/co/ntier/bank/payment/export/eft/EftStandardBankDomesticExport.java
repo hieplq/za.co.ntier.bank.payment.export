@@ -3,8 +3,10 @@ package za.co.ntier.bank.payment.export.eft;
 import java.io.InputStream;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
+import java.text.DecimalFormat;
 import java.util.AbstractMap;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -12,7 +14,10 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.compiere.model.MBPBankAccount;
 import org.compiere.model.MPaySelectionCheck;
+import org.compiere.util.Env;
 
 public class EftStandardBankDomesticExport extends PaymentExportSupport {
 	public static enum RecordType {
@@ -30,7 +35,7 @@ public class EftStandardBankDomesticExport extends PaymentExportSupport {
 	    }
 	}
 	
-	public final String eftSBDMappingContent = """
+	public String eftSBDMappingContent = """
 			<beanio xmlns="http://www.beanio.org/2012/03">
 				<!-- 'strict' enforces record order and record sizes -->
 				<stream name="eftStandardBankDomestic" format="fixedlength" strict="true">
@@ -39,7 +44,7 @@ public class EftStandardBankDomesticExport extends PaymentExportSupport {
 			   			<field name="errFlag" literal="*" length="1" />
 			   			<field name="compCode" length="4" padding=" " justify="left" />
 			   			<field name="compName" length="40" padding=" " justify="left" />
-			   			<field name="actDate" length="8" padding="0" justify="right" />
+			   			<field name="actDate" length="8" type="date" format="yyyyMMdd" padding="0" justify="right" />
 			   			<field name="lang" literal="Y" length="1" />
 			   			<field name="separate1"  length="8" padding=" " />
 			   			<field name="stmRef" length="15" padding=" " justify="left" />
@@ -53,15 +58,15 @@ public class EftStandardBankDomesticExport extends PaymentExportSupport {
 			   		<record name="detail" class="map" occurs="0+" order="2" >
 			   			<field name="payMethod" literal="2" length="1" padding="0" justify="right" />
 			   			<field name="compCode" length="4" padding=" " justify="left" />
-			   			<field name="branchNum" length="6" padding="0" justify="right" />
-			   			<field name="empNum" length="7" padding="0" justify="right" />
-			   			<field name="accNum" length="19" padding="0" justify="right" />
+			   			<field name="branchNum" type="int" length="6" padding="0" justify="right" />
+			   			<field name="empNum" required="true" type="int" length="7" padding="0" justify="right" />
+			   			<field name="accNum" length="19" required="true" type="long" padding="0" justify="right" />
 			   			<field name="separate1" literal=" " length="1" />
 			   			<field name="accType" literal="1" length="1" />
-			   			<field name="amt" type="java.math.BigDecimal" length="11" padding="0" justify="right" />
+			   			<field name="amt" type="java.math.BigDecimal" length="11" padding="0" justify="right" format="#" />
 			   			<field name="accName" length="20" padding=" " justify="left" />
 			   			<field name="separate2" length="10" padding=" " />
-			   			<field name="stmRef" length="15" padding=" " justify="left" />
+			   			<field name="stmRef" literal="MQA" length="15" padding=" " justify="left" />
 			   			<field name="rtgsInd" literal=" " length="1" />
 			   		</record>
 			   		<record name="trailer" class="map" occurs="1" order="3" >
@@ -69,9 +74,9 @@ public class EftStandardBankDomesticExport extends PaymentExportSupport {
 			   			<field name="compCode" length="4" padding=" " justify="left" />
 			   			<field name="trailerInd" literal="T" length="1" />
 			   			<field name="separate1" length="30" padding=" " />
-			   			<field name="amt" type="java.math.BigDecimal" padding="0" justify="right" length="13" />
+			   			<field name="amt" type="java.math.BigDecimal" padding="0" justify="right" length="13" format="#" />
 			   			<field name="separate2" length="14" padding=" " />
-			   			<field name="numTrans" padding="0" justify="right" length="7" />
+			   			<field name="numTrans" type="int" padding="0" justify="right" length="7" />
 			   			<field name="separate2" length="26" padding=" " />
 			   		</record>
 			   	</stream>
@@ -82,6 +87,7 @@ public class EftStandardBankDomesticExport extends PaymentExportSupport {
 	public InputStream getEftMapping() {
 		// can improve to get mapping from attachment
         return IOUtils.toInputStream(eftSBDMappingContent, StandardCharsets.UTF_8);
+        
 	}
 	
 	@Override
@@ -91,31 +97,56 @@ public class EftStandardBankDomesticExport extends PaymentExportSupport {
 	
 	public Map<String, Object> buildEftSbdHeader(MPaySelectionCheck[] checks, boolean depositBatch, String paymentRule, StringBuffer err) {
 		Map<String, Object> eftSBDHeader = new HashMap<>();
-		eftSBDHeader.put("compCode", "592C");
-		eftSBDHeader.put("compName", "MQA Operations");
-		eftSBDHeader.put("actDate", "20250110");
-		eftSBDHeader.put("stmRef", "MQA");
+		eftSBDHeader.put("compCode", "592C"); //TODO: We will put this eventually under the Bank window as a company code field. but not yet defined on 2pac
+		eftSBDHeader.put("compName", "MQA Operations"); //TODO: same as above
+		eftSBDHeader.put("actDate", new Date()); //TODO: CC is same first YY as or google or CC = first YY + 1?
+		eftSBDHeader.put("stmRef", "MQA");//TODO: This will eventually be a field on payment selection (manual)
 		
 		return eftSBDHeader;
 	}
 
 	public List<Map<String, Object>> buildEftSbdDetail(MPaySelectionCheck[] checks, boolean depositBatch, String paymentRule, StringBuffer err) {
 		List<Map<String, Object>> eftSbdDetailData = new ArrayList<>();
-		return eftSbdDetailData;
 		
+		for (MPaySelectionCheck check : checks) {
+			MBPBankAccount[] bpBankAcc = MBPBankAccount.getOfBPartner(Env.getCtx(), check.getC_BPartner_ID());
+			
+			for (MBPBankAccount bpSbdBankAcc : bpBankAcc) {
+				// get first bank account has value for branch number
+				String branchNum = bpSbdBankAcc.get_ValueAsString("ZZ_Branch_Number").trim();
+				if (StringUtils.isNotEmpty(branchNum)) {
+					Map<String, Object> eftSbdDetailLine = new HashMap<>();
+					BigDecimal atm = check.getPayAmt().multiply(new BigDecimal(100));
+					eftSbdDetailLine.put("amt", atm);// TODO: need to convert other currency to rand?
+					eftSbdDetailLine.put("compCode", "592C"); //TODO: We will put this eventually under the Bank window as a company code field. but not yet defined on 2pac
+					
+					eftSbdDetailLine.put("branchNum", Integer.valueOf(branchNum));
+					eftSbdDetailLine.put("accName", bpSbdBankAcc.getA_Name());
+					eftSbdDetailLine.put("accNum", Long.valueOf(bpSbdBankAcc.getAccountNo()));
+					
+					eftSbdDetailData.add(eftSbdDetailLine);
+					break;
+				}//TODO: do need to warning or error for case not found branch number or more than one bank account has branch number?
+			}
+		}
+		
+		//eftSbdDetailLine.put("empNum", "1");//TODO: where to get, on sample has value for this field, maybe use bp.ReferenceNo 
+		return eftSbdDetailData;
 	}
 	
 	public Map<String, Object> buildEftSbdTrailer(Map<String, Object> eftSBDHeader, List<Map<String, Object>> eftSbdDetailData) {
 		Map<String, Object> eftSBDTrailer = new HashMap<>();
+		
 		eftSBDTrailer.put("compCode", eftSBDHeader.get("compCode"));
-		
-		final BigDecimal amount = new BigDecimal(0);
-		eftSbdDetailData.forEach(eftSBDDetailLine -> {
-			amount.add((BigDecimal)eftSBDDetailLine.get("amt"));
-		});
-		eftSBDTrailer.put("amt", amount);
-		
 		eftSBDTrailer.put("numTrans", eftSbdDetailData.size());
+		
+		BigDecimal amount = new BigDecimal(0);
+		
+		for (Map<String, Object> eftSBDDetailLine : eftSbdDetailData) {
+			amount = amount.add((BigDecimal) eftSBDDetailLine.get("amt"));
+		}
+		
+		eftSBDTrailer.put("amt", amount);
 		
 		return eftSBDTrailer;
 	}
