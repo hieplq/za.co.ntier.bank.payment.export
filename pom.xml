@@ -4,8 +4,8 @@
 	<parent>
 		<groupId>org.idempiere</groupId>
 		<artifactId>org.idempiere.parent</artifactId>
-		<version>12.0.0-SNAPSHOT</version>
-		<relativePath>../org.idempiere.parent/pom.xml</relativePath>
+		<version>${revision}</version>
+		<relativePath>../../../triage/idempiere-core-12/org.idempiere.parent/pom.xml</relativePath>
 	</parent>
 	<groupId>za.co.ntier</groupId>
 	<artifactId>za.co.ntier.bank.payment.export</artifactId>
