@@ -72,7 +72,7 @@ public class EftStandardBankDomesticExport extends PaymentExportSupport {
 			for (MBPBankAccount bpSbdBankAcc : bpBankAcc) {
 				// get first bank account has value for branch number
 				String branchNum = bpSbdBankAcc.get_ValueAsString("ZZ_Branch_Number").trim();
-				if (StringUtils.isNotEmpty(branchNum) && bpSbdBankAcc.get_ValueAsBoolean("IsApproved")) {
+				if (StringUtils.isNotEmpty(branchNum) && bpSbdBankAcc.get_ValueAsBoolean("ZZ_Approve")) {
 					Map<String, Object> eftSbdDetailLine = new HashMap<>();
 					BigDecimal atm = check.getPayAmt().multiply(new BigDecimal(100));
 					eftSbdDetailLine.put("amt", atm);// TODO: need to convert other currency to rand?
