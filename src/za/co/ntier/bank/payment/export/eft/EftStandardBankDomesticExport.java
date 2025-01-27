@@ -49,11 +49,7 @@ public class EftStandardBankDomesticExport extends PaymentExportSupport {
 		eftSBDHeader.put("compCode", "592C"); //TODO: We will put this eventually under the Bank window as a company code field. but not yet defined on 2pac
 		eftSBDHeader.put("compName", "MQA Operations"); //TODO: same as above
 	    
-		// acture on 19xx it means 20th century. Please confirm if the bank wants 19 or 20?
-		// It will be ‘20’
 		Calendar currentDate = Calendar.getInstance();
-		// it's lucky when we add 100 (a multiple of 4) so date of 29/3 will don't change
-		currentDate.add(Calendar.YEAR, 100);
 		eftSBDHeader.put("actDate", currentDate);
 		
 		eftSBDHeader.put("stmRef", "MQA");//TODO: This will eventually be a field on payment selection (manual)
