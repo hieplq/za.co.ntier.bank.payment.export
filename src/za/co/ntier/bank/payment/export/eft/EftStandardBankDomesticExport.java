@@ -15,6 +15,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.compiere.model.MBPBankAccount;
 import org.compiere.model.MPaySelectionCheck;
 import org.compiere.util.Env;
+import org.compiere.util.Msg;
 
 public class EftStandardBankDomesticExport extends PaymentExportSupport {
 	public static enum RecordType {
@@ -61,6 +62,7 @@ public class EftStandardBankDomesticExport extends PaymentExportSupport {
 		List<Map<String, Object>> eftSbdDetailData = new ArrayList<>();
 		
 		int empNum = 0;
+		boolean isFoundBankAcc = false;
 		
 		for (MPaySelectionCheck check : checks) {
 			MBPBankAccount[] bpBankAcc = MBPBankAccount.getOfBPartner(Env.getCtx(), check.getC_BPartner_ID());
@@ -71,7 +73,7 @@ public class EftStandardBankDomesticExport extends PaymentExportSupport {
 				if (StringUtils.isNotEmpty(branchNum) && bpSbdBankAcc.get_ValueAsBoolean("ZZ_Approve")) {
 					Map<String, Object> eftSbdDetailLine = new HashMap<>();
 					BigDecimal atm = check.getPayAmt().multiply(new BigDecimal(100));
-					eftSbdDetailLine.put("amt", atm);// TODO: need to convert other currency to rand?
+					eftSbdDetailLine.put("amt", atm);//always rand?
 					eftSbdDetailLine.put("compCode", "592C"); //TODO: We will put this eventually under the Bank window as a company code field. but not yet defined on 2pac
 					
 					eftSbdDetailLine.put("branchNum", Integer.valueOf(branchNum));
@@ -80,12 +82,15 @@ public class EftStandardBankDomesticExport extends PaymentExportSupport {
 					empNum++;
 					eftSbdDetailLine.put("empNum", empNum);
 					eftSbdDetailData.add(eftSbdDetailLine);
+					isFoundBankAcc = true;
 					break;
-				}//TODO: do need to warning or error for case not found branch number or more than one bank account has branch number?
+				}
 			}
 		}
 		
-		//eftSbdDetailLine.put("empNum", "1");//TODO: where to get, on sample has value for this field, maybe use bp.ReferenceNo 
+		if (!isFoundBankAcc) {
+			err.append(Msg.getMsg(Env.getCtx(), "ZZ_BpartnerNonApprovedBankAccount"));
+		}
 		return eftSbdDetailData;
 	}
 	
@@ -108,9 +113,11 @@ public class EftStandardBankDomesticExport extends PaymentExportSupport {
 
 	@Override
 	public Iterator<Entry<String, Map<String, Object>>> getLineIterator(MPaySelectionCheck[] checks, boolean depositBatch, String paymentRule, StringBuffer err) {
-		
-		Map<String, Object>  eftSBDHeader = buildEftSbdHeader(checks, depositBatch, paymentRule, err);
 		List<Map<String, Object>> eftSbdDetailData = buildEftSbdDetail(checks, depositBatch, paymentRule, err);
+		if (err.length() > 0) {
+			return null;
+		}
+		Map<String, Object>  eftSBDHeader = buildEftSbdHeader(checks, depositBatch, paymentRule, err);
 		Map<String, Object> eftSBDTrailer = buildEftSbdTrailer(eftSBDHeader, eftSbdDetailData);
 		
 		List<Entry<String, Map<String, Object>>> lines = new ArrayList<>();

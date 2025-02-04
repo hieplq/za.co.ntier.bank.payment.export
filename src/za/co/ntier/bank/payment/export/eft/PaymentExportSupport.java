@@ -5,15 +5,20 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.logging.Level;
 
 import org.beanio.BeanIOConfigurationException;
 import org.beanio.BeanWriter;
 import org.beanio.StreamFactory;
 import org.compiere.model.MPaySelectionCheck;
+import org.compiere.util.CLogger;
+import org.compiere.util.Env;
+import org.compiere.util.Msg;
 import org.compiere.util.PaymentExport;
 
 public abstract class PaymentExportSupport implements PaymentExport{
-
+	static protected CLogger s_log = CLogger.getCLogger (PaymentExportSupport.class);
+	
 	public abstract InputStream getEftMapping();
 	
 	public abstract String getStreamMappingName ();
@@ -37,6 +42,9 @@ public abstract class PaymentExportSupport implements PaymentExport{
 				
 				Iterator<Map.Entry<String, Map<String, Object>>> lineIterator = getLineIterator(checks, depositBatch, paymentRule, err);
 				
+				if (err.length() > 0)
+					return -1;
+				
 				while (lineIterator.hasNext()) {
 					Map.Entry<String, Map<String, Object>> line = lineIterator.next();
 					eftSBDBeanWriter.write(line.getKey(), line.getValue());
@@ -45,10 +53,14 @@ public abstract class PaymentExportSupport implements PaymentExport{
 
 				eftSBDBeanWriter.flush();
 			} catch (BeanIOConfigurationException e) {
-				e.printStackTrace();
+				s_log.log(Level.SEVERE, e.getMessage());
+				err.append(Msg.getMsg(Env.getCtx(), "ZZ_BeanIOConfigurationError"));
+				return -1;
 			}
 		}catch (IOException eIO) {
-			eIO.printStackTrace();
+			s_log.log(Level.SEVERE, eIO.getMessage());
+			err.append(Msg.getMsg(Env.getCtx(), "ZZ_PaymentExportIOError"));
+			return -1;
 		}
 	    
 	    return lineCount;
