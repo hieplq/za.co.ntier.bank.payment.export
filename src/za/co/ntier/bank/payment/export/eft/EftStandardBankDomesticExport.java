@@ -4,7 +4,10 @@ import java.io.InputStream;
 import java.math.BigDecimal;
 import java.util.AbstractMap;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -13,6 +16,7 @@ import java.util.Map.Entry;
 
 import org.apache.commons.lang3.StringUtils;
 import org.compiere.model.MBPBankAccount;
+import org.compiere.model.MBPartner;
 import org.compiere.model.MPaySelectionCheck;
 import org.compiere.util.Env;
 import org.compiere.util.Msg;
@@ -64,6 +68,16 @@ public class EftStandardBankDomesticExport extends PaymentExportSupport {
 		int empNum = 0;
 		boolean isFoundBankAcc = false;
 		
+		List<MPaySelectionCheck> lsCheck = Arrays.asList(checks);
+		Collections.sort(lsCheck, new Comparator<MPaySelectionCheck>() {
+			@Override
+			public int compare(MPaySelectionCheck o1, MPaySelectionCheck o2) {
+				return o1.getC_BPartner_ID() - o2.getC_BPartner_ID();
+			}
+		});
+		
+		List<Integer> bPartnerNotFoundApprovalAccts = new ArrayList<>();
+		
 		for (MPaySelectionCheck check : checks) {
 			MBPBankAccount[] bpBankAcc = MBPBankAccount.getOfBPartner(Env.getCtx(), check.getC_BPartner_ID());
 			
@@ -86,11 +100,26 @@ public class EftStandardBankDomesticExport extends PaymentExportSupport {
 					break;
 				}
 			}
+			
+			if (!isFoundBankAcc && !bPartnerNotFoundApprovalAccts.contains(check.getC_BPartner_ID())) {
+				bPartnerNotFoundApprovalAccts.add(check.getC_BPartner_ID());
+			}
+			isFoundBankAcc = false;
 		}
 		
-		if (!isFoundBankAcc) {
-			err.append(Msg.getMsg(Env.getCtx(), "ZZ_BpartnerNonApprovedBankAccount"));
+		if(!bPartnerNotFoundApprovalAccts.isEmpty()) {
+			StringBuilder bPartnerNotFoundApprovalAcctNames = new StringBuilder();
+			for(Integer bPartnerNotFoundApprovalAcct : bPartnerNotFoundApprovalAccts) {
+				MBPartner partner = MBPartner.get(Env.getCtx(), bPartnerNotFoundApprovalAcct);
+				if(!bPartnerNotFoundApprovalAcctNames.isEmpty()) {
+                    bPartnerNotFoundApprovalAcctNames.append(", ");
+                }
+				bPartnerNotFoundApprovalAcctNames.append(partner.getName());
+			}
+			
+			err.append(Msg.getMsg(Env.getCtx(), "ZZ_BpartnerNonApprovedBankAccount", new Object [] {bPartnerNotFoundApprovalAcctNames.toString()}));
 		}
+		
 		return eftSbdDetailData;
 	}
 	
