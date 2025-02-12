@@ -6,7 +6,7 @@ import java.io.InputStream;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.logging.Level;
-
+import org.adempiere.exceptions.AdempiereException;
 import org.beanio.BeanIOConfigurationException;
 import org.beanio.BeanWriter;
 import org.beanio.StreamFactory;
@@ -52,6 +52,7 @@ public abstract class PaymentExportSupport implements PaymentExport{
 				}
 
 				eftSBDBeanWriter.flush();
+				complete();
 			} catch (BeanIOConfigurationException e) {
 				s_log.log(Level.SEVERE, e.getMessage());
 				err.append(Msg.getMsg(Env.getCtx(), "ZZ_BeanIOConfigurationError"));
@@ -61,8 +62,16 @@ public abstract class PaymentExportSupport implements PaymentExport{
 			s_log.log(Level.SEVERE, eIO.getMessage());
 			err.append(Msg.getMsg(Env.getCtx(), "ZZ_PaymentExportIOError"));
 			return -1;
+		}catch (AdempiereException aEx) {
+			s_log.log(Level.SEVERE, aEx.getMessage());
+			err.append(aEx.getMessage());
+			return -1;
 		}
 	    
 	    return lineCount;
+	}
+	
+	public void complete () {
+		
 	}
 }

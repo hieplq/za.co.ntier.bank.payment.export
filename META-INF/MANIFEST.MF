@@ -9,8 +9,10 @@ Automatic-Module-Name: za.co.ntier.bank.payment.export
 Bundle-ActivationPolicy: lazy
 Bundle-RequiredExecutionEnvironment: JavaSE-17
 Require-Capability: osgi.ee;filter:="(&(osgi.ee=JavaSE)(version>=17))"
-Service-Component: OSGI-INF/za.co.ntier.bank.payment.export.osgi.component.PaymentExportMappedByNameFactory.xml
+Service-Component: OSGI-INF/za.co.ntier.bank.payment.export.osgi.component.AnnotationModelFactory.xml,
+ OSGI-INF/za.co.ntier.bank.payment.export.osgi.component.PaymentExportMappedByNameFactory.xml
 Import-Package: org.adempiere.base,
+ org.adempiere.exceptions,
  org.apache.commons.io;version="[2.15.0,3.0.0)",
  org.apache.commons.lang3;version="[3.12.0,4.0.0)",
  org.compiere.model,
